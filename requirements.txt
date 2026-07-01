@@ -16,7 +16,9 @@ sentence-transformers
 google-generativeai
 
 python-dotenv
-
+pdf2image
+pytesseract
+Pillow
 pypdf
 python-docx
 
