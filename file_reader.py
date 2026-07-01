@@ -16,6 +16,8 @@ def read_pdf(file):
 
     try:
 
+        from pypdf import PdfReader
+
         reader = PdfReader(file)
 
         text = ""
@@ -25,10 +27,37 @@ def read_pdf(file):
             page_text = page.extract_text()
 
             if page_text:
-
                 text += page_text + "\n"
 
-        return text.strip()
+        # If text found, return it
+        if text.strip():
+            return text.strip()
+
+        # ==============================
+        # OCR FOR SCANNED PDF
+        # ==============================
+
+        import pytesseract
+        from pdf2image import convert_from_bytes
+
+        # Windows Tesseract path
+        pytesseract.pytesseract.tesseract_cmd = (
+            r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+        )
+
+        file.seek(0)
+
+        images = convert_from_bytes(file.read())
+
+        ocr_text = ""
+
+        for image in images:
+
+            ocr_text += pytesseract.image_to_string(image)
+
+            ocr_text += "\n"
+
+        return ocr_text.strip()
 
     except Exception as e:
 
