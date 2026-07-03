@@ -1,75 +1,126 @@
 # ==========================================================
-# TEXT TO SPEECH
+# TTS.PY
+# AI Document Assistant
 # Compatible with Python 3.13+
 # ==========================================================
 
 import os
+import tempfile
+
 from gtts import gTTS
 
-# ==========================================================
-# OUTPUT DIRECTORY
-# ==========================================================
-
-OUTPUT_DIR = "outputs"
-os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ==========================================================
-# LANGUAGE MAP
+# SUPPORTED LANGUAGES
 # ==========================================================
 
-LANGUAGE_CODES = {
+LANGUAGES = {
+
     "English": "en",
+
     "Hindi": "hi",
+
     "Marathi": "mr",
+
     "Gujarati": "gu",
+
     "Punjabi": "pa",
+
     "Bengali": "bn",
+
     "Tamil": "ta",
+
     "Telugu": "te",
+
     "Kannada": "kn",
+
     "Malayalam": "ml",
+
     "Urdu": "ur",
+
     "French": "fr",
+
     "German": "de",
+
     "Spanish": "es",
+
     "Italian": "it",
+
     "Portuguese": "pt",
+
     "Russian": "ru",
+
     "Japanese": "ja",
+
     "Korean": "ko",
-    "Chinese": "zh-cn",
-    "Arabic": "ar",
+
+    "Chinese": "zh-CN",
+
+    "Arabic": "ar"
+
 }
+
+
+# ==========================================================
+# GET LANGUAGE CODE
+# ==========================================================
+
+def get_language_code(language):
+
+    return LANGUAGES.get(language, "en")
+
+
+# ==========================================================
+# GET LANGUAGE LIST
+# ==========================================================
+
+def get_languages():
+
+    return list(LANGUAGES.keys())
+
 
 # ==========================================================
 # TEXT TO SPEECH
 # ==========================================================
 
-def text_to_speech(text, filename="speech.mp3", language="English"):
-    """
-    Convert text to speech and save as MP3.
+def text_to_speech(
 
-    Args:
-        text (str): Text to convert.
-        filename (str): Output filename.
-        language (str): Language name.
+    text,
 
-    Returns:
-        str | None: Path to generated MP3 file.
-    """
+    language="English"
 
-    if not text or not text.strip():
+):
+
+    if not text.strip():
+
         return None
 
-    lang = LANGUAGE_CODES.get(language, "en")
-
-    output_path = os.path.join(OUTPUT_DIR, filename)
-
     try:
+
+        language_code = get_language_code(
+
+            language
+
+        )
+
         tts = gTTS(
+
             text=text,
-            lang=lang,
+
+            lang=language_code,
+
             slow=False
+
+        )
+
+        temp_dir = tempfile.gettempdir()
+
+        output_path = os.path.join(
+
+            temp_dir,
+
+            "speech.mp3"
+
         )
 
         tts.save(output_path)
@@ -77,8 +128,57 @@ def text_to_speech(text, filename="speech.mp3", language="English"):
         return output_path
 
     except Exception as e:
-        print(f"TTS Error: {e}")
-        return None
+
+        raise Exception(
+
+            f"TTS Error:\n{e}"
+
+        )
+
+
+# ==========================================================
+# SAVE AUDIO
+# ==========================================================
+
+def save_audio(
+
+    text,
+
+    filename,
+
+    language="English"
+
+):
+
+    try:
+
+        language_code = get_language_code(
+
+            language
+
+        )
+
+        tts = gTTS(
+
+            text=text,
+
+            lang=language_code,
+
+            slow=False
+
+        )
+
+        tts.save(filename)
+
+        return filename
+
+    except Exception as e:
+
+        raise Exception(
+
+            f"Unable to save audio:\n{e}"
+
+        )
 
 
 # ==========================================================
@@ -87,12 +187,19 @@ def text_to_speech(text, filename="speech.mp3", language="English"):
 
 if __name__ == "__main__":
 
+    sample = """
+
+    Artificial Intelligence
+    is transforming the world.
+
+    """
+
     file = text_to_speech(
-        "Hello! Welcome to AI Document Assistant.",
-        filename="test.mp3"
+
+        sample,
+
+        "English"
+
     )
 
-    if file:
-        print("Audio saved at:", file)
-    else:
-        print("Failed to generate speech.")
+    print(file)

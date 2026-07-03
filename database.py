@@ -19,7 +19,7 @@ def get_connection():
 
 
 # ==========================================================
-# CREATE TABLES
+# CREATE DATABASE
 # ==========================================================
 
 def create_database():
@@ -27,67 +27,41 @@ def create_database():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Upload History
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS uploads (
-
+    CREATE TABLE IF NOT EXISTS uploads(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-
         filename TEXT,
-
         filetype TEXT,
-
         filesize REAL,
-
         upload_time TEXT
-
     )
     """)
 
-    # Summary History
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS summaries (
-
+    CREATE TABLE IF NOT EXISTS summaries(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-
         filename TEXT,
-
         summary_type TEXT,
-
         summary TEXT,
-
         created_at TEXT
-
     )
     """)
 
-    # Translation History
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS translations (
-
+    CREATE TABLE IF NOT EXISTS translations(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-
         language TEXT,
-
         translated_text TEXT,
-
         created_at TEXT
-
     )
     """)
 
-    # Chat History
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS chat_history (
-
+    CREATE TABLE IF NOT EXISTS chat_history(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-
         question TEXT,
-
         answer TEXT,
-
         created_at TEXT
-
     )
     """)
 
@@ -107,19 +81,15 @@ def save_upload(filename, filetype, filesize):
     cursor.execute("""
 
         INSERT INTO uploads
+        (filename,filetype,filesize,upload_time)
 
-        (filename, filetype, filesize, upload_time)
+        VALUES(?,?,?,?)
 
-        VALUES (?, ?, ?, ?)
-
-    """, (
+    """,(
 
         filename,
-
         filetype,
-
         filesize,
-
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     ))
@@ -140,25 +110,82 @@ def save_summary(filename, summary_type, summary):
     cursor.execute("""
 
         INSERT INTO summaries
+        (filename,summary_type,summary,created_at)
 
-        (filename, summary_type, summary, created_at)
+        VALUES(?,?,?,?)
 
-        VALUES (?, ?, ?, ?)
-
-    """, (
+    """,(
 
         filename,
-
         summary_type,
-
         summary,
-
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     ))
 
     conn.commit()
     conn.close()
+
+
+# ==========================================================
+# SAVE HISTORY
+# Used by app.py
+# ==========================================================
+
+def save_history(filename, summary):
+
+    save_summary(
+
+        filename,
+
+        "Generated",
+
+        summary
+
+    )
+
+
+# ==========================================================
+# LOAD HISTORY
+# Used by app.py
+# ==========================================================
+
+def load_history():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+
+        SELECT filename,
+               summary,
+               created_at
+
+        FROM summaries
+
+        ORDER BY id DESC
+
+    """)
+
+    rows = cursor.fetchall()
+
+    conn.close()
+
+    history = []
+
+    for row in rows:
+
+        history.append({
+
+            "filename": row[0],
+
+            "summary": row[1],
+
+            "created_at": row[2]
+
+        })
+
+    return history
 
 
 # ==========================================================
@@ -173,17 +200,14 @@ def save_translation(language, translated_text):
     cursor.execute("""
 
         INSERT INTO translations
+        (language,translated_text,created_at)
 
-        (language, translated_text, created_at)
+        VALUES(?,?,?)
 
-        VALUES (?, ?, ?)
-
-    """, (
+    """,(
 
         language,
-
         translated_text,
-
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     ))
@@ -204,17 +228,14 @@ def save_chat(question, answer):
     cursor.execute("""
 
         INSERT INTO chat_history
+        (question,answer,created_at)
 
-        (question, answer, created_at)
+        VALUES(?,?,?)
 
-        VALUES (?, ?, ?)
-
-    """, (
+    """,(
 
         question,
-
         answer,
-
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     ))
@@ -224,97 +245,7 @@ def save_chat(question, answer):
 
 
 # ==========================================================
-# GET UPLOAD HISTORY
-# ==========================================================
-
-def get_uploads():
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-
-        SELECT * FROM uploads
-
-        ORDER BY id DESC
-
-    """)
-
-    rows = cursor.fetchall()
-
-    conn.close()
-
-    return rows
-
-
-# ==========================================================
-# GET SUMMARY HISTORY
-# ==========================================================
-
-def get_summaries():
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-
-        SELECT * FROM summaries
-
-        ORDER BY id DESC
-
-    """)
-
-    rows = cursor.fetchall()
-
-    conn.close()
-
-    return rows
-
-
-# ==========================================================
-# GET CHAT HISTORY
-# ==========================================================
-
-def get_chat_history():
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-
-        SELECT * FROM chat_history
-
-        ORDER BY id DESC
-
-    """)
-
-    rows = cursor.fetchall()
-
-    conn.close()
-
-    return rows
-
-
-# ==========================================================
-# DELETE ALL DATA
-# ==========================================================
-
-def clear_database():
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("DELETE FROM uploads")
-    cursor.execute("DELETE FROM summaries")
-    cursor.execute("DELETE FROM translations")
-    cursor.execute("DELETE FROM chat_history")
-
-    conn.commit()
-    conn.close()
-
-
-# ==========================================================
-# DATABASE STATISTICS
+# GET STATISTICS
 # ==========================================================
 
 def get_statistics():
@@ -342,6 +273,24 @@ def get_statistics():
 
 
 # ==========================================================
+# CLEAR DATABASE
+# ==========================================================
+
+def clear_database():
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("DELETE FROM uploads")
+    cursor.execute("DELETE FROM summaries")
+    cursor.execute("DELETE FROM translations")
+    cursor.execute("DELETE FROM chat_history")
+
+    conn.commit()
+    conn.close()
+
+
+# ==========================================================
 # INITIALIZE DATABASE
 # ==========================================================
 
@@ -354,8 +303,6 @@ create_database()
 
 if __name__ == "__main__":
 
-    create_database()
-
-    print("Database created successfully.")
+    print("Database Ready")
 
     print(get_statistics())

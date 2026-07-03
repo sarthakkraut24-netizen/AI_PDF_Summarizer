@@ -1,70 +1,88 @@
 # ==========================================================
-# AI SUMMARIZER
+# SUMMARIZER.PY
+# AI Document Assistant
+# Gemini AI Summarizer
 # Compatible with Python 3.13+
 # ==========================================================
 
-import torch
-from transformers import pipeline
+import os
 
+import google.generativeai as genai
+
+from dotenv import load_dotenv
+
+from utils import split_text
+
+
+# ==========================================================
+# LOAD API KEY
+# ==========================================================
+
+load_dotenv()
+
+API_KEY = os.getenv("GOOGLE_API_KEY")
+
+if not API_KEY:
+    raise ValueError(
+        "GOOGLE_API_KEY not found in .env file."
+    )
+
+genai.configure(api_key=API_KEY)
+
+
+# ==========================================================
+# AI SUMMARIZER
+# ==========================================================
 
 class AISummarizer:
 
     def __init__(self):
 
-        self.device = 0 if torch.cuda.is_available() else -1
-
-        self.model = pipeline(
-            task="summarization",
-            model="facebook/bart-large-cnn",
-            device=self.device
+        self.model = genai.GenerativeModel(
+            "gemini-2.5-flash"
         )
 
     # ======================================================
-    # Split Large Documents
+    # GENERATE SUMMARY
     # ======================================================
 
-    def split_text(self, text, max_words=800):
-
-        words = text.split()
-
-        chunks = []
-
-        for i in range(0, len(words), max_words):
-
-            chunk = " ".join(words[i:i + max_words])
-
-            chunks.append(chunk)
-
-        return chunks
-
-    # ======================================================
-    # Generate Summary
-    # ======================================================
-
-    def summarize(self, text, summary_type="Medium"):
+    def summarize(
+        self,
+        text,
+        summary_type="Medium"
+    ):
 
         if not text.strip():
 
-            return ""
+            return "No text found."
 
         summary_type = summary_type.lower()
 
         if summary_type == "short":
 
-            max_length = 60
-            min_length = 20
+            instruction = """
+            Summarize in 5-6 bullet points.
+            Keep it concise.
+            """
 
         elif summary_type == "long":
 
-            max_length = 220
-            min_length = 80
+            instruction = """
+            Generate a detailed summary.
+            Include every important point.
+            """
 
         else:
 
-            max_length = 120
-            min_length = 40
+            instruction = """
+            Generate a medium-length summary.
+            Cover all important information.
+            """
 
-        chunks = self.split_text(text)
+        chunks = split_text(
+            text,
+            chunk_size=1800
+        )
 
         summaries = []
 
@@ -72,25 +90,38 @@ class AISummarizer:
 
             for chunk in chunks:
 
-                result = self.model(
+                prompt = f"""
+                {instruction}
 
-                    chunk,
+                Document:
 
-                    max_length=max_length,
+                {chunk}
+                """
 
-                    min_length=min_length,
-
-                    do_sample=False,
-
-                    truncation=True
-
+                response = self.model.generate_content(
+                    prompt
                 )
 
-                summaries.append(result[0]["summary_text"])
+                summaries.append(
+                    response.text.strip()
+                )
 
-            final_summary = " ".join(summaries)
+            if len(summaries) == 1:
 
-            return final_summary
+                return summaries[0]
+
+            final_prompt = f"""
+            Combine these summaries into one
+            well-structured summary.
+
+            {' '.join(summaries)}
+            """
+
+            final_summary = self.model.generate_content(
+                final_prompt
+            )
+
+            return final_summary.text.strip()
 
         except Exception as e:
 
@@ -106,12 +137,21 @@ if __name__ == "__main__":
     ai = AISummarizer()
 
     sample = """
-    Artificial Intelligence is transforming the world.
-    It enables computers to perform tasks that usually
-    require human intelligence.
-    AI is widely used in healthcare, finance,
-    agriculture, education, transportation,
-    robotics and cybersecurity.
+    Artificial Intelligence is transforming
+    healthcare, education, finance and
+    transportation by automating tasks,
+    improving decision making and increasing
+    productivity.
     """
 
-    print(ai.summarize(sample, "Medium"))
+    print(
+
+        ai.summarize(
+
+            sample,
+
+            "Medium"
+
+        )
+
+    )

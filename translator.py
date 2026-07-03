@@ -1,5 +1,6 @@
 # ==========================================================
-# TRANSLATOR
+# TRANSLATOR.PY
+# AI Document Assistant
 # Compatible with Python 3.13+
 # ==========================================================
 
@@ -34,50 +35,44 @@ LANGUAGES = {
 }
 
 # ==========================================================
-# TRANSLATE TEXT
+# GET LANGUAGE LIST
 # ==========================================================
 
-def translate_text(text, language="English"):
-
-    if not text.strip():
-        return ""
-
-    if language == "English":
-        return text
-
-    try:
-
-        translator = GoogleTranslator(
-            source="auto",
-            target=LANGUAGES.get(language, "en")
-        )
-
-        translated = translator.translate(text)
-
-        return translated
-
-    except Exception as e:
-
-        return f"Translation Error: {e}"
-
+def get_languages():
+    return list(LANGUAGES.keys())
 
 # ==========================================================
 # GET LANGUAGE CODE
 # ==========================================================
 
 def get_language_code(language):
-
     return LANGUAGES.get(language, "en")
 
-
 # ==========================================================
-# GET LANGUAGE LIST
+# TRANSLATE TEXT
 # ==========================================================
 
-def get_languages():
+def translate_text(text, target_language="English"):
 
-    return list(LANGUAGES.keys())
+    if not text.strip():
+        return ""
 
+    try:
+
+        language_code = get_language_code(target_language)
+
+        translated = GoogleTranslator(
+            source="auto",
+            target=language_code
+        ).translate(text)
+
+        return translated
+
+    except Exception as e:
+
+        raise Exception(
+            f"Translation Error:\n{e}"
+        )
 
 # ==========================================================
 # TEST
@@ -85,15 +80,11 @@ def get_languages():
 
 if __name__ == "__main__":
 
-    sample = """
-    Artificial Intelligence is transforming the world.
-    """
+    sample = "Artificial Intelligence is changing the world."
 
-    print("Original:\n")
-    print(sample)
-
-    print("\nHindi:\n")
-    print(translate_text(sample, "Hindi"))
-
-    print("\nMarathi:\n")
-    print(translate_text(sample, "Marathi"))
+    print(
+        translate_text(
+            sample,
+            "Hindi"
+        )
+    )

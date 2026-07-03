@@ -1,11 +1,16 @@
 # ==========================================================
 # OCR.PY
 # AI Document Assistant
+# PyMuPDF + EasyOCR
 # Compatible with Python 3.13+
 # ==========================================================
 
+import io
+
+import fitz
 import easyocr
 import numpy as np
+
 from PIL import Image
 
 # ==========================================================
@@ -16,9 +21,6 @@ _reader = None
 
 
 def get_reader():
-    """
-    Load EasyOCR model only once.
-    """
 
     global _reader
 
@@ -26,7 +28,7 @@ def get_reader():
 
         _reader = easyocr.Reader(
 
-            ['en'],
+            ["en"],
 
             gpu=False
 
@@ -36,14 +38,10 @@ def get_reader():
 
 
 # ==========================================================
-# OCR FROM IMAGE
+# OCR FROM PIL IMAGE
 # ==========================================================
 
 def extract_text_from_image(image):
-
-    """
-    Extract text from a PIL Image.
-    """
 
     reader = get_reader()
 
@@ -55,7 +53,9 @@ def extract_text_from_image(image):
 
     for result in results:
 
-        text += result[1] + "\n"
+        text += result[1]
+
+        text += "\n"
 
     return text.strip()
 
@@ -66,45 +66,106 @@ def extract_text_from_image(image):
 
 def image_file_to_text(uploaded_file):
 
-    """
-    Read uploaded JPG/PNG image.
-    """
-
     image = Image.open(uploaded_file)
 
     return extract_text_from_image(image)
 
 
 # ==========================================================
-# OCR FROM PDF IMAGES
+# OCR FROM SCANNED PDF
+# ==========================================================
+
+def extract_text_from_scanned_pdf(uploaded_file):
+
+    try:
+
+        uploaded_file.seek(0)
+
+        pdf_bytes = uploaded_file.read()
+
+        document = fitz.open(
+
+            stream=pdf_bytes,
+
+            filetype="pdf"
+
+        )
+
+        final_text = ""
+
+        for page in document:
+
+            pix = page.get_pixmap(
+
+                dpi=300
+
+            )
+
+            image_bytes = pix.tobytes(
+
+                "png"
+
+            )
+
+            image = Image.open(
+
+                io.BytesIO(
+
+                    image_bytes
+
+                )
+
+            )
+
+            page_text = extract_text_from_image(
+
+                image
+
+            )
+
+            final_text += page_text
+
+            final_text += "\n\n"
+
+        document.close()
+
+        return final_text.strip()
+
+    except Exception as e:
+
+        raise Exception(
+
+            f"OCR Error:\n{e}"
+
+        )
+
+
+# ==========================================================
+# OCR FROM PAGE IMAGES
 # ==========================================================
 
 def pdf_images_to_text(images):
 
-    """
-    OCR every image page of a scanned PDF.
-    """
+    text = ""
 
-    final_text = ""
+    for image in images:
 
-    for page in images:
+        text += extract_text_from_image(
 
-        final_text += extract_text_from_image(page)
+            image
 
-        final_text += "\n\n"
+        )
 
-    return final_text.strip()
+        text += "\n\n"
+
+    return text.strip()
 
 
 # ==========================================================
-# DETECT IF OCR IS NEEDED
+# DETECT SCANNED PDF
 # ==========================================================
 
 def needs_ocr(text):
-
-    """
-    Returns True if extracted PDF text is too small.
-    """
 
     if text is None:
 
@@ -118,9 +179,36 @@ def needs_ocr(text):
 
 
 # ==========================================================
+# OCR INFORMATION
+# ==========================================================
+
+def ocr_info():
+
+    return {
+
+        "engine": "EasyOCR",
+
+        "pdf_engine": "PyMuPDF",
+
+        "gpu": False
+
+    }
+
+
+# ==========================================================
 # TEST
 # ==========================================================
 
 if __name__ == "__main__":
 
-    print("EasyOCR Module Loaded Successfully")
+    print(
+
+        "OCR Module Loaded Successfully"
+
+    )
+
+    print(
+
+        ocr_info()
+
+    )

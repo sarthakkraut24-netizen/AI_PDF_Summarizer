@@ -1,20 +1,24 @@
 # ==========================================================
-# PDF CHAT MODULE
+# PDF_CHAT.PY
 # AI Document Assistant
-# Part 1 - PDF Processing & Vector Database
+# LangChain 1.x + Gemini + HuggingFace
 # Compatible with Python 3.13+
 # ==========================================================
 
 import os
-from dotenv import load_dotenv
-from pypdf import PdfReader
+import shutil
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
+from dotenv import load_dotenv
+
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_huggingface import HuggingFaceEmbeddings
 
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 # ==========================================================
-# LOAD ENVIRONMENT VARIABLES
+# LOAD ENVIRONMENT
 # ==========================================================
 
 load_dotenv()
@@ -23,126 +27,118 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 if not GOOGLE_API_KEY:
     raise ValueError(
-        "GOOGLE_API_KEY not found. Please add it to your .env file."
+        "GOOGLE_API_KEY not found in .env"
     )
 
 # ==========================================================
-# VECTOR DATABASE CONFIGURATION
+# GEMINI MODEL
 # ==========================================================
 
-VECTOR_FOLDER = "vectorstore"
-
-os.makedirs(VECTOR_FOLDER, exist_ok=True)
-
-# ==========================================================
-# READ PDF
-# ==========================================================
-
-def read_pdf(pdf_path):
-
-    try:
-
-        reader = PdfReader(pdf_path)
-
-        text = ""
-
-        for page in reader.pages:
-
-            page_text = page.extract_text()
-
-            if page_text:
-
-                text += page_text + "\n"
-
-        return text.strip()
-
-    except Exception as e:
-
-        raise Exception(f"Error reading PDF:\n{e}")
+llm = ChatGoogleGenerativeAI(
+    model="gemini-2.5-flash",
+    temperature=0.3
+)
 
 # ==========================================================
-# SPLIT TEXT INTO CHUNKS
+# HUGGINGFACE EMBEDDINGS
 # ==========================================================
 
-def split_text(text):
-
-    splitter = RecursiveCharacterTextSplitter(
-
-        chunk_size=1000,
-
-        chunk_overlap=200,
-
-        length_function=len
-
-    )
-
-    return splitter.split_text(text)
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
+)
 
 # ==========================================================
-# LOAD EMBEDDING MODEL
+# VECTOR DATABASE
 # ==========================================================
 
-def load_embeddings():
+DB_PATH = "vector_store"
 
-    try:
+splitter = RecursiveCharacterTextSplitter(
+    chunk_size=1000,
+    chunk_overlap=200,
+    separators=[
+        "\n\n",
+        "\n",
+        ". ",
+        " "
+    ]
+)
 
-        embeddings = HuggingFaceEmbeddings(
+# ==========================================================
+# CREATE DOCUMENTS
+# ==========================================================
 
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+def create_documents(
+    text,
+    filename="document"
+):
+
+    return [
+
+        Document(
+
+            page_content=text,
+
+            metadata={
+
+                "source": filename
+
+            }
 
         )
 
-        return embeddings
-
-    except Exception as e:
-
-        raise Exception(f"Embedding Model Error:\n{e}")
-
+    ]
 # ==========================================================
-# CREATE VECTOR DATABASE
+# INDEX DOCUMENT
 # ==========================================================
 
-def create_vector_database(pdf_path):
-
-    text = read_pdf(pdf_path)
+def index_document(
+    text,
+    filename="document"
+):
 
     if not text.strip():
 
-        raise Exception("No text found inside PDF.")
+        return False
 
-    chunks = split_text(text)
-
-    embeddings = load_embeddings()
-
-    vector_db = FAISS.from_texts(
-
-        texts=chunks,
-
-        embedding=embeddings
-
+    documents = create_documents(
+        text,
+        filename
     )
 
-    vector_db.save_local(VECTOR_FOLDER)
+    chunks = splitter.split_documents(
+        documents
+    )
+
+    vectorstore = FAISS.from_documents(
+        chunks,
+        embeddings
+    )
+
+    if os.path.exists(DB_PATH):
+
+        shutil.rmtree(DB_PATH)
+
+    vectorstore.save_local(
+        DB_PATH
+    )
 
     return True
+
 
 # ==========================================================
 # LOAD VECTOR DATABASE
 # ==========================================================
 
-def load_vector_database():
+def load_database():
 
-    if not os.path.exists(VECTOR_FOLDER):
+    if not os.path.exists(DB_PATH):
 
-        raise FileNotFoundError(
-            "Vector database not found."
-        )
+        return None
 
-    embeddings = load_embeddings()
+    return FAISS.load_local(
 
-    vector_db = FAISS.load_local(
-
-        VECTOR_FOLDER,
+        DB_PATH,
 
         embeddings,
 
@@ -150,390 +146,262 @@ def load_vector_database():
 
     )
 
-    return vector_db
 
 # ==========================================================
-# CHECK VECTOR DATABASE
+# DOCUMENT INDEXED?
 # ==========================================================
 
-def vector_database_exists():
+def is_document_indexed():
 
-    return os.path.exists(VECTOR_FOLDER)
-# ==========================================================
-# GOOGLE GEMINI LLM
-# ==========================================================
+    return os.path.exists(DB_PATH)
 
-import google.generativeai as genai
-
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.documents import Document
 
 # ==========================================================
-# CONFIGURE GEMINI
+# DATABASE INFORMATION
 # ==========================================================
 
-genai.configure(
-    api_key=GOOGLE_API_KEY
-)
+def database_info():
 
-# ==========================================================
-# LOAD GEMINI MODEL
-# ==========================================================
+    db = load_database()
 
-def load_llm():
+    if db is None:
 
-    try:
+        return {
 
-        llm = ChatGoogleGenerativeAI(
-
-            model="gemini-2.5-flash",
-
-            temperature=0.3,
-
-            google_api_key=GOOGLE_API_KEY
-
-        )
-
-        return llm
-
-    except Exception as e:
-
-        raise Exception(f"Gemini Model Error:\n{e}")
-
-# ==========================================================
-# CREATE RETRIEVER
-# ==========================================================
-
-def create_retriever():
-
-    vector_db = load_vector_database()
-
-    retriever = vector_db.as_retriever(
-
-        search_type="similarity",
-
-        search_kwargs={
-
-            "k": 4
+            "chunks": 0
 
         }
 
-    )
-
-    return retriever
-
-# ==========================================================
-# LOAD CHATBOT
-# ==========================================================
-
-def load_chatbot():
-
-    retriever = create_retriever()
-
-    llm = load_llm()
-
     return {
-        "retriever": retriever,
-        "llm": llm
+
+        "chunks": db.index.ntotal
+
     }
 
+
 # ==========================================================
-# ASK QUESTION
+# RESET VECTOR DATABASE
 # ==========================================================
 
-def ask_question(chatbot, question):
-
-    if not question.strip():
-        return "Please enter a valid question."
+def reset_chat():
 
     try:
 
-        docs = chatbot["retriever"].invoke(question)
+        if os.path.exists(DB_PATH):
 
-        context = "\n\n".join(
-            doc.page_content for doc in docs
-        )
+            shutil.rmtree(DB_PATH)
 
-        prompt = f"""
-Use ONLY the context below to answer the question.
+        return True
 
-Context:
-{context}
+    except Exception:
 
-Question:
-{question}
-
-Answer:
-"""
-
-        response = chatbot["llm"].invoke(prompt)
-
-        return response.content
-
-    except Exception as e:
-
-        return f"Error: {e}"
-
-# ==========================================================
-# ASK QUESTION WITH SOURCES
-# ==========================================================
-
-def ask_with_sources(chatbot, question):
-
-    docs = chatbot["retriever"].invoke(question)
-
-    context = "\n\n".join(
-        doc.page_content for doc in docs
-    )
-
-    prompt = f"""
-Use ONLY the context below.
-
-Context:
-{context}
-
-Question:
-{question}
-
-Answer:
-"""
-
-    response = chatbot["llm"].invoke(prompt)
-
-    return response.content, docs
-
-# ==========================================================
-# SEARCH DOCUMENTS
-# ==========================================================
-
-def search_documents(question):
-
-    db = load_vector_database()
-
-    docs = db.similarity_search(
-
-        question,
-
-        k=4
-
-    )
-
-    return docs
-
-# ==========================================================
-# GET DOCUMENT COUNT
-# ==========================================================
-
-def total_chunks():
-
-    db = load_vector_database()
-
-    return db.index.ntotal
-# ==========================================================
-# CHAT HISTORY
-# ==========================================================
-
-chat_history = []
-
-
-def get_chat_history():
-
-    return chat_history
-
-
-def clear_chat_history():
-
-    global chat_history
-
-    chat_history.clear()
-
-
+        return False
 # ==========================================================
 # CHAT WITH PDF
 # ==========================================================
 
 def chat_with_pdf(question):
 
-    chatbot = load_chatbot()
+    db = load_database()
 
-    answer = ask_question(chatbot, question)
+    if db is None:
 
-    chat_history.append({
+        return "No document has been indexed."
 
-        "question": question,
+    try:
 
-        "answer": answer
+        # ------------------------------------------
+        # Retrieve most relevant chunks
+        # ------------------------------------------
 
-    })
+        docs = db.similarity_search(
 
-    return answer
+            question,
+
+            k=4
+
+        )
+
+        if len(docs) == 0:
+
+            return "No relevant information found."
+
+        # ------------------------------------------
+        # Build Context
+        # ------------------------------------------
+
+        context = "\n\n".join(
+
+            doc.page_content
+
+            for doc in docs
+
+        )
+
+        # ------------------------------------------
+        # Prompt
+        # ------------------------------------------
+
+        prompt = f"""
+You are an intelligent AI Document Assistant.
+
+Answer ONLY using the information provided in the document.
+
+If the answer is not available in the document,
+reply exactly:
+
+"I could not find this information in the uploaded document."
+
+-------------------------
+DOCUMENT
+-------------------------
+
+{context}
+
+-------------------------
+QUESTION
+-------------------------
+
+{question}
+
+-------------------------
+ANSWER
+-------------------------
+"""
+
+        # ------------------------------------------
+        # Gemini Response
+        # ------------------------------------------
+
+        response = llm.invoke(
+
+            prompt
+
+        )
+
+        if hasattr(
+
+            response,
+
+            "content"
+
+        ):
+
+            return response.content.strip()
+
+        return str(response)
+
+    except Exception as e:
+
+        return f"Error: {e}"
 
 
 # ==========================================================
-# MULTIPLE PDF SUPPORT
+# SEARCH DOCUMENT
 # ==========================================================
 
-def create_multiple_pdf_database(pdf_files):
+def search_document(
 
-    all_text = ""
+    keyword,
 
-    for pdf in pdf_files:
+    top_k=5
 
-        try:
+):
 
-            all_text += read_pdf(pdf) + "\n"
+    db = load_database()
 
-        except Exception:
+    if db is None:
 
-            continue
+        return []
 
-    if not all_text.strip():
+    try:
 
-        raise Exception("No readable PDF files found.")
+        docs = db.similarity_search(
 
-    chunks = split_text(all_text)
+            keyword,
 
-    embeddings = load_embeddings()
+            k=top_k
 
-    vector_db = FAISS.from_texts(
+        )
 
-        texts=chunks,
+        return [
 
-        embedding=embeddings
+            doc.page_content
 
-    )
+            for doc in docs
 
-    vector_db.save_local(VECTOR_FOLDER)
+        ]
 
-    return True
+    except Exception:
+
+        return []
 
 
 # ==========================================================
-# REBUILD VECTOR DATABASE
+# GET ALL CHUNKS
 # ==========================================================
 
-def rebuild_vector_database(pdf_path):
+def get_all_chunks():
 
-    delete_vector_database()
+    db = load_database()
 
-    return create_vector_database(pdf_path)
+    if db is None:
+
+        return []
+
+    try:
+
+        docs = db.similarity_search(
+
+            "",
+
+            k=db.index.ntotal
+
+        )
+
+        return [
+
+            doc.page_content
+
+            for doc in docs
+
+        ]
+
+    except Exception:
+
+        return []
+# ==========================================================
+# DOCUMENT COUNT
+# ==========================================================
+
+def document_count():
+
+    db = load_database()
+
+    if db is None:
+
+        return 0
+
+    try:
+
+        return db.index.ntotal
+
+    except Exception:
+
+        return 0
 
 
 # ==========================================================
 # DELETE VECTOR DATABASE
 # ==========================================================
 
-def delete_vector_database():
-
-    if not os.path.exists(VECTOR_FOLDER):
-
-        return False
-
-    for file in os.listdir(VECTOR_FOLDER):
-
-        file_path = os.path.join(
-
-            VECTOR_FOLDER,
-
-            file
-
-        )
-
-        try:
-
-            os.remove(file_path)
-
-        except Exception:
-
-            pass
-
-    return True
-
-
-# ==========================================================
-# VECTOR DATABASE INFORMATION
-# ==========================================================
-
-def vector_database_info():
-
-    exists = os.path.exists(VECTOR_FOLDER)
-
-    total_files = 0
-
-    if exists:
-
-        total_files = len(os.listdir(VECTOR_FOLDER))
-
-    return {
-
-        "exists": exists,
-
-        "folder": VECTOR_FOLDER,
-
-        "files": total_files
-
-    }
-
-
-# ==========================================================
-# TEST VECTOR DATABASE
-# ==========================================================
-
-def test_database():
+def delete_database():
 
     try:
 
-        db = load_vector_database()
+        if os.path.exists(DB_PATH):
 
-        return {
-
-            "status": True,
-
-            "chunks": db.index.ntotal
-
-        }
-
-    except Exception as e:
-
-        return {
-
-            "status": False,
-
-            "error": str(e)
-
-        }
-# ==========================================================
-# HEALTH CHECK
-# ==========================================================
-
-def system_health():
-
-    report = {}
-
-    report["Google API"] = GOOGLE_API_KEY is not None
-
-    report["Vector Database"] = vector_database_exists()
-
-    try:
-
-        report["Embedding Model"] = load_embeddings() is not None
-
-    except Exception:
-
-        report["Embedding Model"] = False
-
-    return report
-
-
-# ==========================================================
-# CHATBOT STATUS
-# ==========================================================
-
-def chatbot_ready():
-
-    try:
-
-        load_chatbot()
+            shutil.rmtree(DB_PATH)
 
         return True
 
@@ -543,79 +411,112 @@ def chatbot_ready():
 
 
 # ==========================================================
-# PRINT SYSTEM STATUS
+# VECTOR DATABASE EXISTS
 # ==========================================================
 
-def print_status():
+def database_exists():
 
-    info = system_health()
-
-    print("\n========== SYSTEM STATUS ==========\n")
-
-    for key, value in info.items():
-
-        print(f"{key} : {value}")
-
-    print("\n===================================\n")
+    return os.path.exists(DB_PATH)
 
 
 # ==========================================================
-# STANDALONE TEST
+# GET DATABASE SIZE (MB)
+# ==========================================================
+
+def database_size():
+
+    if not os.path.exists(DB_PATH):
+
+        return 0
+
+    total = 0
+
+    for root, dirs, files in os.walk(DB_PATH):
+
+        for file in files:
+
+            path = os.path.join(root, file)
+
+            total += os.path.getsize(path)
+
+    return round(total / (1024 * 1024), 2)
+
+
+# ==========================================================
+# DATABASE INFORMATION
+# ==========================================================
+
+def database_status():
+
+    return {
+
+        "exists": database_exists(),
+
+        "chunks": document_count(),
+
+        "size_mb": database_size()
+
+    }
+
+
+# ==========================================================
+# TEST
 # ==========================================================
 
 if __name__ == "__main__":
 
-    print("\nAI Document Assistant")
-    print("------------------------------")
+    sample = """
+Artificial Intelligence is transforming education,
+healthcare, finance and agriculture.
 
-    print_status()
+Machine Learning allows computers to learn
+from data without explicit programming.
 
-    pdf_file = "sample.pdf"
+Deep Learning is a subset of Machine Learning.
+"""
 
-    if os.path.exists(pdf_file):
+    print("Creating Vector Database...")
 
-        print("\nCreating Vector Database...")
+    index_document(
 
-        try:
+        sample,
 
-            create_vector_database(pdf_file)
+        "sample.txt"
 
-            print("Vector Database Created Successfully.")
+    )
 
-        except Exception as e:
+    print()
 
-            print(e)
+    print(
 
-        if chatbot_ready():
+        "Database:",
 
-            chatbot = load_chatbot()
+        database_status()
 
-            while True:
+    )
 
-                question = input("\nAsk a question (type 'exit' to quit): ")
+    print()
 
-                if question.lower() == "exit":
+    while True:
 
-                    break
+        question = input(
 
-                answer = ask_question(
+            "Ask Question (type exit): "
 
-                    chatbot,
+        )
 
-                    question
+        if question.lower() == "exit":
 
-                )
+            break
 
-                print("\nAnswer:\n")
+        answer = chat_with_pdf(
 
-                print(answer)
+            question
 
-        else:
+        )
 
-            print("Chatbot could not be loaded.")
+        print()
 
-    else:
+        print(answer)
 
-        print("\nsample.pdf not found.")
-
-    print("\nProgram Finished.")
+        print()        
