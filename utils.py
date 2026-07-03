@@ -1,31 +1,57 @@
 # ==========================================================
-# UTILITY FUNCTIONS
+# UTILS.PY
+# AI Document Assistant
 # Compatible with Python 3.13+
 # ==========================================================
 
-import os
 import re
+import os
+import string
 from datetime import datetime
 
+
 # ==========================================================
-# PROJECT FOLDERS
+# CLEAN TEXT
 # ==========================================================
 
-UPLOAD_FOLDER = "uploads"
-OUTPUT_FOLDER = "outputs"
-HISTORY_FOLDER = "history"
+def clean_text(text: str) -> str:
+    """
+    Cleans extracted document text.
+    """
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-os.makedirs(HISTORY_FOLDER, exist_ok=True)
+    if not text:
+        return ""
 
-HISTORY_FILE = os.path.join(HISTORY_FOLDER, "history.txt")
+    # Remove multiple spaces
+    text = re.sub(r"\s+", " ", text)
+
+    # Remove multiple blank lines
+    text = re.sub(r"\n+", "\n", text)
+
+    return text.strip()
+
+
+# ==========================================================
+# REMOVE SPECIAL CHARACTERS
+# ==========================================================
+
+def remove_special_characters(text: str) -> str:
+    """
+    Removes unnecessary special characters.
+    """
+
+    allowed = string.ascii_letters + string.digits + " .,!?():;%$@#/-\n"
+
+    cleaned = "".join(ch for ch in text if ch in allowed)
+
+    return cleaned
+
 
 # ==========================================================
 # WORD COUNT
 # ==========================================================
 
-def word_count(text):
+def word_count(text: str) -> int:
 
     if not text:
         return 0
@@ -37,7 +63,7 @@ def word_count(text):
 # CHARACTER COUNT
 # ==========================================================
 
-def character_count(text):
+def character_count(text: str) -> int:
 
     if not text:
         return 0
@@ -46,174 +72,40 @@ def character_count(text):
 
 
 # ==========================================================
-# SENTENCE COUNT
+# ESTIMATED READING TIME
 # ==========================================================
 
-def sentence_count(text):
-
-    if not text:
-        return 0
-
-    sentences = re.split(r"[.!?]+", text)
-
-    return len([s for s in sentences if s.strip()])
-
-
-# ==========================================================
-# PARAGRAPH COUNT
-# ==========================================================
-
-def paragraph_count(text):
-
-    if not text:
-        return 0
-
-    paragraphs = text.split("\n\n")
-
-    return len([p for p in paragraphs if p.strip()])
-
-
-# ==========================================================
-# READING TIME
-# ==========================================================
-
-def reading_time(text):
+def reading_time(text: str) -> int:
+    """
+    Average reading speed = 200 words/minute
+    """
 
     words = word_count(text)
 
-    return max(1, round(words / 200))
+    minutes = max(1, round(words / 200))
+
+    return minutes
 
 
 # ==========================================================
-# COMPRESSION PERCENTAGE
+# CURRENT DATE & TIME
 # ==========================================================
 
-def compression_percentage(original, summary):
+def current_datetime():
 
-    original_words = word_count(original)
-    summary_words = word_count(summary)
-
-    if original_words == 0:
-
-        return 0
-
-    percentage = (
-        (original_words - summary_words)
-        / original_words
-    ) * 100
-
-    return round(percentage, 2)
-
-
-# ==========================================================
-# CLEAN TEXT
-# ==========================================================
-
-def clean_text(text):
-
-    if not text:
-
-        return ""
-
-    text = re.sub(r"\s+", " ", text)
-
-    return text.strip()
-
-
-# ==========================================================
-# SAVE SUMMARY
-# ==========================================================
-
-def save_summary(summary):
-
-    if not summary:
-
-        return None
-
-    filename = f"summary_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
-
-    filepath = os.path.join(
-        OUTPUT_FOLDER,
-        filename
-    )
-
-    with open(
-        filepath,
-        "w",
-        encoding="utf-8"
-    ) as file:
-
-        file.write(summary)
-
-    return filepath
-
-
-# ==========================================================
-# SAVE HISTORY
-# ==========================================================
-
-def save_history(original_text, summary):
-
-    with open(
-        HISTORY_FILE,
-        "a",
-        encoding="utf-8"
-    ) as file:
-
-        file.write("=" * 80 + "\n")
-        file.write(f"Date : {datetime.now()}\n\n")
-
-        file.write("ORIGINAL TEXT\n")
-        file.write(original_text)
-
-        file.write("\n\nSUMMARY\n")
-        file.write(summary)
-
-        file.write("\n\n")
-
-
-# ==========================================================
-# LOAD HISTORY
-# ==========================================================
-
-def load_history():
-
-    if not os.path.exists(HISTORY_FILE):
-
-        return "No history available."
-
-    with open(
-        HISTORY_FILE,
-        "r",
-        encoding="utf-8"
-    ) as file:
-
-        return file.read()
-
-
-# ==========================================================
-# CLEAR HISTORY
-# ==========================================================
-
-def clear_history():
-
-    with open(
-        HISTORY_FILE,
-        "w",
-        encoding="utf-8"
-    ) as file:
-
-        file.write("")
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 # ==========================================================
 # FILE SIZE
 # ==========================================================
 
-def file_size(file):
+def file_size(file) -> float:
+    """
+    Returns uploaded file size in KB.
+    """
 
     if file is None:
-
         return 0
 
     return round(file.size / 1024, 2)
@@ -223,40 +115,74 @@ def file_size(file):
 # FILE EXTENSION
 # ==========================================================
 
-def file_extension(file):
+def file_extension(filename: str) -> str:
 
-    if file is None:
-
-        return ""
-
-    return os.path.splitext(file.name)[1].lower()
+    return os.path.splitext(filename)[1].lower()
 
 
 # ==========================================================
-# PROJECT INFORMATION
+# VALIDATE FILE
 # ==========================================================
 
-def project_info():
+SUPPORTED_FILES = [
+    ".pdf",
+    ".docx",
+    ".txt",
+    ".pptx",
+    ".xlsx",
+    ".png",
+    ".jpg",
+    ".jpeg"
+]
 
-    return {
 
-        "Project": "AI Document Assistant",
+def is_supported(filename: str) -> bool:
 
-        "Version": "3.0",
+    return file_extension(filename) in SUPPORTED_FILES
 
-        "Developer": "Sarthak Raut",
 
-        "Framework": "Streamlit",
+# ==========================================================
+# SPLIT LARGE TEXT
+# ==========================================================
 
-        "Language": "Python 3.13",
+def split_text(text: str, chunk_size: int = 800):
 
-        "Database": "SQLite",
+    words = text.split()
 
-        "AI Model": "facebook/bart-large-cnn",
+    chunks = []
 
-        "Chat Model": "Gemini 2.5 Flash"
+    for i in range(0, len(words), chunk_size):
 
-    }
+        chunks.append(" ".join(words[i:i + chunk_size]))
+
+    return chunks
+
+
+# ==========================================================
+# SUCCESS MESSAGE
+# ==========================================================
+
+def success(message):
+
+    return f"✅ {message}"
+
+
+# ==========================================================
+# ERROR MESSAGE
+# ==========================================================
+
+def error(message):
+
+    return f"❌ {message}"
+
+
+# ==========================================================
+# INFO MESSAGE
+# ==========================================================
+
+def info(message):
+
+    return f"ℹ️ {message}"
 
 
 # ==========================================================
@@ -266,13 +192,14 @@ def project_info():
 if __name__ == "__main__":
 
     sample = """
-    Artificial Intelligence is transforming the world.
-    It enables machines to perform intelligent tasks.
+    Artificial Intelligence is transforming industries.
+    AI improves automation, decision making and productivity.
     """
 
-    print("Words :", word_count(sample))
-    print("Characters :", character_count(sample))
-    print("Sentences :", sentence_count(sample))
-    print("Paragraphs :", paragraph_count(sample))
-    print("Reading Time :", reading_time(sample), "minute(s)")
-    print("Project Info :", project_info())
+    print("Clean Text:")
+    print(clean_text(sample))
+
+    print("\nWord Count:", word_count(sample))
+    print("Character Count:", character_count(sample))
+    print("Reading Time:", reading_time(sample), "minute(s)")
+    print("Current Date:", current_datetime())
