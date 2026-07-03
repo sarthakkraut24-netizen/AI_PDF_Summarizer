@@ -1,75 +1,50 @@
-# ============================
-# STREAMLIT
-# ============================
-streamlit>=1.47.0
+streamlit>=1.49.0
 
-# ============================
-# AI & LLM
-# ============================
+# AI
 google-generativeai>=0.8.5
-langchain>=0.3.27
-langchain-community>=0.3.27
-langchain-google-genai>=2.1.8
-langchain-huggingface>=0.3.1
+langchain>=1.0.0
+langchain-core>=1.0.0
+langchain-community>=0.3.29
+langchain-google-genai>=2.1.10
+langchain-huggingface>=1.0.0
+langchain-text-splitters>=0.3.8
 
-# ============================
-# EMBEDDINGS & VECTOR STORE
-# ============================
+# Embeddings
+sentence-transformers>=5.1.0
 faiss-cpu>=1.11.0
-sentence-transformers>=5.0.0
 
-# ============================
-# HUGGING FACE
-# ============================
-transformers==4.53.3
-torch>=2.7.0
-accelerate>=1.8.1
-sentencepiece>=0.2.1
+# Hugging Face
+transformers>=4.56.0
+huggingface-hub>=0.34.4
+tokenizers>=0.22.0
 
-# ============================
-# DOCUMENT READING
-# ============================
-pypdf>=5.8.0
+# PDF
+pypdf>=6.0.0
+pdf2image>=1.17.0
+PyMuPDF>=1.26.4
+
+# OCR
+pytesseract>=0.3.13
+Pillow>=11.3.0
+
+# Office Files
 python-docx>=1.2.0
 python-pptx>=1.0.2
 openpyxl>=3.1.5
-pandas>=2.3.1
-pdf2image>=1.17.0
-# ============================
-# OCR
-# ============================
-easyocr>=1.7.2
-opencv-python-headless>=4.12.0.88
-Pillow>=11.3.0
+pandas>=2.3.2
 
-# ============================
-# TABLE EXTRACTION
-# ============================
-pdfplumber>=0.11.7
+# Tables
+camelot-py>=1.0.9
+tabulate>=0.9.0
 
-# ============================
-# TRANSLATION
-# ============================
+# Translation
 deep-translator>=1.11.4
 
-# ============================
-# TEXT TO SPEECH
-# ============================
+# Text-to-Speech
 gTTS>=2.5.4
 
-# ============================
-# ENVIRONMENT VARIABLES
-# ============================
+# Environment
 python-dotenv>=1.1.1
 
-# ============================
-# NUMERICAL
-# ============================
-numpy>=2.3.1
-scikit-learn>=1.7.0
-
-# ============================
-# UTILITIES
-# ============================
-requests>=2.32.4
-tqdm>=4.67.1
+# Utilities
+numpy>=2.3.3
