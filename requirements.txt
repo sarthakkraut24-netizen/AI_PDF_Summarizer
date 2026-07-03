@@ -1,31 +1,75 @@
-streamlit
+# ============================
+# STREAMLIT
+# ============================
+streamlit>=1.47.0
+
+# ============================
+# AI & LLM
+# ============================
+google-generativeai>=0.8.5
+langchain>=0.3.27
+langchain-community>=0.3.27
+langchain-google-genai>=2.1.8
+langchain-huggingface>=0.3.1
+
+# ============================
+# EMBEDDINGS & VECTOR STORE
+# ============================
+faiss-cpu>=1.11.0
+sentence-transformers>=5.0.0
+
+# ============================
+# HUGGING FACE
+# ============================
 transformers==4.53.3
-torch
-sentencepiece
-accelerate
-tokenizers==0.21.4
-langchain
-langchain-community
-langchain-text-splitters
-langchain-huggingface
-langchain-google-genai
+torch>=2.7.0
+accelerate>=1.8.1
+sentencepiece>=0.2.1
 
-faiss-cpu
-sentence-transformers
+# ============================
+# DOCUMENT READING
+# ============================
+pypdf>=5.8.0
+python-docx>=1.2.0
+python-pptx>=1.0.2
+openpyxl>=3.1.5
+pandas>=2.3.1
 
-google-generativeai
+# ============================
+# OCR
+# ============================
+easyocr>=1.7.2
+opencv-python-headless>=4.12.0.88
+Pillow>=11.3.0
 
-python-dotenv
-pdf2image
-pytesseract
-Pillow
-pypdf
-python-docx
+# ============================
+# TABLE EXTRACTION
+# ============================
+pdfplumber>=0.11.7
 
-deep-translator
-gTTS
+# ============================
+# TRANSLATION
+# ============================
+deep-translator>=1.11.4
 
-pandas
-numpy
+# ============================
+# TEXT TO SPEECH
+# ============================
+gTTS>=2.5.4
 
-safetensors
+# ============================
+# ENVIRONMENT VARIABLES
+# ============================
+python-dotenv>=1.1.1
+
+# ============================
+# NUMERICAL
+# ============================
+numpy>=2.3.1
+scikit-learn>=1.7.0
+
+# ============================
+# UTILITIES
+# ============================
+requests>=2.32.4
+tqdm>=4.67.1
